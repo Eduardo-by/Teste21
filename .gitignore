@@ -1,0 +1,7 @@
+__pycache__/
+.venv/
+.env
+cache_api.json
+progresso_raspagem.json
+leads_*.csv
+leads_*.xlsx
