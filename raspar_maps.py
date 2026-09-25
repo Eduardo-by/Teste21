@@ -23,6 +23,7 @@ import time
 from dataclasses import asdict
 from urllib.parse import quote
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import TimeoutError as PWTimeout
 from playwright.sync_api import sync_playwright
 
@@ -135,6 +136,23 @@ def ler_local(page, href: str, termo: str) -> Lead | None:
     )
 
 
+def abrir_navegador(pw, headless: bool):
+    """Usa o Chromium do Playwright; se não estiver baixado, cai para Edge/Chrome instalados."""
+    try:
+        return pw.chromium.launch(headless=headless)
+    except PlaywrightError as e:
+        if "Executable doesn't exist" not in str(e):
+            raise
+    for canal in ("msedge", "chrome"):
+        try:
+            nav = pw.chromium.launch(channel=canal, headless=headless)
+            print(f"Usando o navegador instalado: {canal}")
+            return nav
+        except PlaywrightError:
+            continue
+    raise SystemExit("Nenhum navegador encontrado. Rode: python -m playwright install chromium")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("-c", "--categorias", nargs="+", default=config.CATEGORIAS)
@@ -154,7 +172,7 @@ def main():
     visitados = set(prog["visitados"])
 
     with sync_playwright() as pw:
-        nav = pw.chromium.launch(headless=not args.mostrar)
+        nav = abrir_navegador(pw, headless=not args.mostrar)
         ctx = nav.new_context(locale="pt-BR", viewport={"width": 1280, "height": 900})
         page = ctx.new_page()
         try:
